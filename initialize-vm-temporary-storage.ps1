@@ -10,18 +10,32 @@ if ($dvdDrive) {
     $dvdDrive.Put()
     Start-Sleep -Seconds 5
 }
+# Get the boot/system volume drive letter
+$bootDrive = (Get-Volume | Where-Object { $_.BootVolume -or $_.SystemVolume }).DriveLetter
 
+# Get all disks
+$allDisks = Get-Disk | Where-Object { $_.OperationalStatus -eq 'Online' }
 
-# Find uninitialized disk (likely temporary disk)
-$disk = Get-Disk | Where-Object { $_.PartitionStyle -eq 'RAW' -and $_.OperationalStatus -eq 'Online' }
+# Filter disks that have no partitions with drive letters and are not the boot/system disk
+$eligibleDisks = foreach ($disk in $allDisks) {
+    $partitions = Get-Partition -DiskNumber $disk.Number
+    $hasDriveLetter = $partitions | Where-Object { $_.DriveLetter }
+    $isBootDisk = $partitions | Where-Object { $_.DriveLetter -eq $bootDrive }
 
-if ($disk) {
-    # Initialize with GPT
-    Initialize-Disk -Number $disk.Number -PartitionStyle GPT -Confirm:$false
+    if ($hasDriveLetter.Count -eq 0 -and $isBootDisk.Count -eq 0) {
+        $disk
+    }
+}
 
-    # Create a new partition using all space
-    $partition = New-Partition -DiskNumber $disk.Number -UseMaximumSize -AssignDriveLetter -DriveLetter 'D'
+foreach ($disk in $eligibleDisks) {
+    try {
+        # Create a new partition using maximum size
+        $partition = New-Partition -DiskNumber $disk.Number -UseMaximumSize -AssignDriveLetter
 
-    # Format it as NTFS and label it
-    Format-Volume -Partition $partition -FileSystem NTFS -NewFileSystemLabel "Temporary Storage" -Confirm:$false
+        # Format the partition with NTFS
+        Format-Volume -Partition $partition -FileSystem NTFS -NewFileSystemLabel "Temporary Storage" -Confirm:$false
+        Write-Host "Partition created and formatted on Disk $($disk.Number)"
+    } catch {
+        Write-Warning "Failed to process Disk $($disk.Number): $_"
+    }
 }
