@@ -10,6 +10,9 @@ if [ -z "$SF_RUNTIME_VERSION" ]; then
   exit 1
 fi
 
+echo "servicefabric servicefabric/accepted-eula boolean true" | sudo debconf-set-selections
+echo "servicefabric servicefabric/accepted-all-eula boolean true" | sudo debconf-set-selections
+
 # 🔗 Construct runtime download URL
 BASE_URL="https://download.microsoft.com/download/3/1/F/31F3FEEB-F073-4E27-A98B-8E691FF74F40"
 RUNTIME_FILE="ServiceFabric.$SF_RUNTIME_VERSION.deb"
