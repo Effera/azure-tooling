@@ -1,12 +1,12 @@
 # This script initializes the temporary storage disk in a Windows VM.
-# It reassigns the DVD drive letter to E: if a an uninitialized disk exists,
-# and initializes the temporary disk, formats and assigns it to drive letter D.
+# It reassigns the DVD drive letter to Z: if a an uninitialized disk exists,
+# and initializes the temporary disk, formats and assigns it to drive letter D and continues to assign subsequent disks to E, F, etc.
 
 # Find uninitialized disk (likely temporary disk)
 $disk = Get-Disk | Where-Object { $_.PartitionStyle -eq 'RAW' -and $_.OperationalStatus -eq 'Online' }
 
 if ($disk) {
-    # Reassign dvd drive D: to E: if it exists
+    # Reassign dvd drive D: to Z: if it exists
     $dvdDrive = Get-WmiObject Win32_Volume | Where-Object { $_.DriveType -eq 5 }
     if ($dvdDrive) {
         $dvdDrive.DriveLetter = $null
@@ -14,7 +14,7 @@ if ($disk) {
 
         Start-Sleep -Seconds 5
 
-        $dvdDrive.DriveLetter = 'E:'
+        $dvdDrive.DriveLetter = 'Z:'
         $dvdDrive.Put()
         Start-Sleep -Seconds 5
     }
